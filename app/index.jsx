@@ -1,18 +1,11 @@
-import {
-  FlatList,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from "react-native";
-import { useState, useContext } from "react";
+import { Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { useState, useContext, useEffect } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import animated, { LinearTransition } from "react-native-reanimated";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { StatusBar } from "expo-status-bar";
+import { useRouter } from "expo-router";
 import Octicons from "@expo/vector-icons/Octicons";
 import { ThemeContext } from "@/context/ThemeContext";
 import { data } from "@/data/todos";
@@ -20,16 +13,47 @@ import { data } from "@/data/todos";
 export default function Index() {
   const Container = Platform.OS === "web" ? ScrollView : SafeAreaView;
 
-  const [todos, setTodos] = useState(data);
+  const [todos, setTodos] = useState([]);
   const [text, setText] = useState("");
   const { colorScheme, setColorScheme, theme } = useContext(ThemeContext);
+  const router = useRouter();
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const jsonValue = await AsyncStorage.getItem("TodoApp");
+        const storageTodos = jsonValue !== null ? JSON.parse(jsonValue) : null;
+        if (storageTodos && storageTodos.length) {
+          setTodos(storageTodos.sort((a, b) => b.id - a.id));
+        } else {
+          setTodos(data.sort((a, b) => b.id - a.id));
+        }
+      } catch (error) {
+        console.log(error, "error");
+      }
+    };
+
+    fetchData();
+  }, [data]);
+
+  useEffect(() => {
+    const storeData = async () => {
+      try {
+        const jsonValue = JSON.stringify(todos);
+        await AsyncStorage.setItem("TodoApp", jsonValue);
+      } catch (error) {
+        console.log(error, "error");
+      }
+    };
+    storeData();
+  }, [todos]);
 
   const styles = createStyles(theme, colorScheme);
 
   const addTodo = () => {
     if (text.trim()) {
-      const maxId = todos.length > 0 ? Math.max(...todos.map((todo) => todo.id)) : 0;
-      const newId = maxId + 1;
+      const newId = todos.length > 0 ? todos[0].id + 1 : 1;
+      // const newId = maxId + 1;
       setTodos([{ id: newId, title: text, completed: false }, ...todos]);
       setText("");
     }
@@ -43,12 +67,16 @@ export default function Index() {
     setTodos(todos.filter((todo) => todo.id !== id));
   };
 
+  const handlePress = (id) => {
+    router.push(`/todos/${id}`);
+  };
+
   const renderItems = ({ item }) => {
     return (
       <View style={styles.todoContainer}>
-        <Text style={[styles.todoText, item.completed && styles.completedText]} onPress={() => toggleTodo(item.id)}>
-          {item.title}
-        </Text>
+        <Pressable onLongPress={() => toggleTodo(item.id)} onPress={() => handlePress(item.id)}>
+          <Text style={[styles.todoText, item.completed && styles.completedText]}>{item.title}</Text>
+        </Pressable>
         <Pressable onPress={() => deleteTodo(item.id)}>
           <MaterialCommunityIcons name="delete-circle" color={"red"} size={36} />
         </Pressable>
@@ -61,6 +89,7 @@ export default function Index() {
       <View style={styles.inputContainer}>
         <TextInput
           placeholder="Add a new Todo..."
+          maxLength={30}
           style={styles.input}
           onChangeText={setText}
           value={text}
@@ -90,6 +119,7 @@ export default function Index() {
           keyboardDismissMode="on-drag"
         />
       </View>
+      <StatusBar style={colorScheme === "dark" ? "light" : "dark"} />
     </Container>
   );
 }
