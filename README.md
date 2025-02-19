@@ -48,3 +48,7 @@ Join our community of developers creating universal apps.
 
 - [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
 - [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+
+## Install App
+
+-[Android](https://expo.dev/accounts/abhiieyh/projects/curd-native/builds/0f5af842-cda7-4eaf-9169-5281da22e54b)
